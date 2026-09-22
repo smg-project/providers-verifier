@@ -44,7 +44,7 @@ def longctx_cases(sizes: tuple[int, ...] = (32_000, 128_000, 512_000, 1_000_000)
             Case(
                 f"longctx_{size // 1000}k",
                 "longctx",
-                {"messages": [{"role": "user", "content": build_prompt(size, code)}], "max_tokens": 200},
+                {"messages": [{"role": "user", "content": build_prompt(size, code)}], "max_tokens": 1024},
                 {"kind": "text", "content_contains": code, "prompt_tokens_exact": True},
                 "needle in the middle; prompt_tokens must match the vendor",
             )

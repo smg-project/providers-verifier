@@ -58,7 +58,7 @@ COLOR_Q = "Which three colors are in this image? Answer with the color names onl
 COUNT_Q = "How many images did I send? Answer with a digit only."
 
 
-def _case(id_: str, parts: list[dict[str, Any]], question: str, expect: dict[str, Any] | None = None, max_tokens: int = 400, notes: str = "") -> Case:
+def _case(id_: str, parts: list[dict[str, Any]], question: str, expect: dict[str, Any] | None = None, max_tokens: int = 800, notes: str = "") -> Case:
     content = [{"type": "text", "text": question}, *parts]
     return Case(id_, "media", {"messages": [{"role": "user", "content": content}], "max_tokens": max_tokens}, expect or {"kind": "text"}, notes)
 
