@@ -11,6 +11,7 @@ dependencies = [
     "jsonschema>=4.23",
     "pillow>=10.4",
     "python-dotenv>=1.0",
+    "tokenizers>=0.20",
 ]
 
 [project.optional-dependencies]
@@ -27,3 +28,10 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "providers_verifier"
 module-root = "src"
+
+[tool.ruff]
+line-length = 200
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

@@ -36,6 +36,8 @@ def vendor_body(request: dict[str, Any]) -> dict[str, Any]:
     for streamed tool calls. Cases may override `thinking`."""
     body: dict[str, Any] = {}
     body["thinking"] = request.get("thinking", {"type": "enabled", "clear_thinking": False})
-    if request.get("stream") and request.get("tools"):
+    if request.get("tool_stream") is not None:
+        body["tool_stream"] = request["tool_stream"]
+    elif request.get("stream") and request.get("tools"):
         body["tool_stream"] = True
     return body

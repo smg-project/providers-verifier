@@ -50,6 +50,10 @@ def args_match_schema(rec: dict[str, Any], tools: list[dict[str, Any]]) -> bool 
 
 def golden_summary(goldens: list[dict[str, Any]]) -> dict[str, Any]:
     """Collapse repeated vendor recordings into the majority behaviour."""
+    # records with no HTTP status are client-side failures (SDK rejected a field, connection error);
+    # they say nothing about the vendor, so they only count when nothing else exists
+    answered = [g for g in goldens if g.get("status") is not None]
+    goldens = answered or goldens
     ok = [g for g in goldens if g.get("status") == 200]
     base = ok or goldens
     return {
@@ -59,6 +63,7 @@ def golden_summary(goldens: list[dict[str, Any]]) -> dict[str, Any]:
         "tool_names": _majority([list(_tool_names(g)) for g in base]),
         "reasoning_present": _majority([bool(g.get("reasoning_present")) for g in base]),
         "stream_usage_present": _majority([g.get("stream_usage_present") for g in base]),
+        "prompt_tokens": _majority([(g.get("usage") or {}).get("prompt_tokens") for g in base]),
         "n": len(goldens),
         "n_success": len(ok),
     }
@@ -75,8 +80,9 @@ def compare(case: dict[str, Any], golden: dict[str, Any], target: dict[str, Any]
     check("status_class", _status_class(target.get("status")) == golden["status_class"], golden["status_class"], _status_class(target.get("status")))
     if target.get("status") == 200 and golden["status_class"] == "2xx":
         check("finish_reason", target.get("finish_reason") == golden["finish_reason"], golden["finish_reason"], target.get("finish_reason"))
-        check("tool_triggered", bool(target.get("tool_calls")) == golden["tool_triggered"], golden["tool_triggered"], bool(target.get("tool_calls")))
-        if golden["tool_triggered"]:
+        want_trigger = expect["expected_tool_call"] if expect.get("expected_tool_call") is not None else golden["tool_triggered"]
+        check("tool_triggered", bool(target.get("tool_calls")) == want_trigger, want_trigger, bool(target.get("tool_calls")))
+        if want_trigger:
             check("tool_names", list(_tool_names(target)) == golden["tool_names"], golden["tool_names"], list(_tool_names(target)))
             tools = case.get("request", {}).get("tools") or []
             check("args_match_schema", args_match_schema(target, tools), True, args_match_schema(target, tools))
@@ -104,6 +110,14 @@ def compare(case: dict[str, Any], golden: dict[str, Any], target: dict[str, Any]
             positions = [(got.find(k), k) for k in expect["content_order"] if got.find(k) != -1]
             order = [k for _, k in sorted(positions)]
             check("content_order", order == expect["content_order"], expect["content_order"], order)
+        if expect.get("prompt_tokens_exact") and golden.get("prompt_tokens") is not None:
+            got_pt = (target.get("usage") or {}).get("prompt_tokens")
+            check("prompt_tokens_match", got_pt == golden["prompt_tokens"], golden["prompt_tokens"], got_pt)
+        if "contains_russian_characters_unicode" in (expect.get("check_type") or []):
+            import re as _re
+
+            has_ru = bool(_re.search(r"[\u0400-\u04FF]", target.get("content") or ""))
+            check("language_following", not has_ru, True, not has_ru)
         # leak detector: think markers never belong in content
         leak = "</think>" in (target.get("content") or "") or "<think>" in (target.get("content") or "")
         check("no_think_leak", not leak, True, not leak)
@@ -112,6 +126,7 @@ def compare(case: dict[str, Any], golden: dict[str, Any], target: dict[str, Any]
     return {
         "case": case["id"],
         "category": case["category"],
+        "expected_tool_call": expect.get("expected_tool_call"),
         "pass": not hard,
         "failed_checks": hard,
         "checks": checks,

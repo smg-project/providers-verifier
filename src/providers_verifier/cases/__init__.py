@@ -132,13 +132,6 @@ CASES: list[Case] = [
         "GLM-5.3 thinking is forced on; reasoning_content must be present.",
     ),
     Case(
-        "thinking_type_disabled",
-        "thinking",
-        {"messages": _msg("Is 97 prime? One word."), "max_tokens": 300, "thinking": {"type": "disabled"}},
-        {"kind": "any"},
-        "z.ai documents that GLM-5.3-Flash cannot disable thinking; record what the vendor does.",
-    ),
-    Case(
         "thinking_effort_none",
         "thinking",
         {"messages": _msg("Is 97 prime? One word."), "max_tokens": 300, "reasoning_effort": "none"},
@@ -149,21 +142,6 @@ CASES: list[Case] = [
         "thinking",
         {"messages": _msg("Is 97 prime? One word."), "max_tokens": 300, "reasoning_effort": "low"},
         {"kind": "text", "reasoning_present": True},
-    ),
-    Case(
-        "thinking_clear_thinking_roundtrip",
-        "thinking",
-        {
-            "messages": [
-                {"role": "user", "content": "Pick a number between 1 and 10 and remember it. Reply only with 'ok'."},
-                {"role": "assistant", "content": "ok", "reasoning_content": "I will pick 7 and keep it in mind."},
-                {"role": "user", "content": "Which number did you pick? Answer with the digit only."},
-            ],
-            "max_tokens": 200,
-            "thinking": {"type": "enabled", "clear_thinking": False},
-        },
-        {"kind": "text", "content_contains": "7"},
-        "Preserved thinking: prior reasoning_content must reach the model.",
     ),
     Case(
         "tools_single_auto",
@@ -215,9 +193,7 @@ CASES: list[Case] = [
                 {
                     "role": "assistant",
                     "content": "",
-                    "tool_calls": [
-                        {"id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": '{"city": "Beijing"}'}}
-                    ],
+                    "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": '{"city": "Beijing"}'}}],
                 },
                 {"role": "tool", "tool_call_id": "call_1", "content": '{"temp_c": 21, "condition": "sunny"}'},
             ],
@@ -266,7 +242,12 @@ CASES: list[Case] = [
         "vision_image_base64",
         "vision",
         {
-            "messages": [{"role": "user", "content": [{"type": "text", "text": "Which two colors are in this image? Answer with the two color names only."}, {"type": "image_url", "image_url": {"url": _png_data_url()}}]}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "Which two colors are in this image? Answer with the two color names only."}, {"type": "image_url", "image_url": {"url": _png_data_url()}}],
+                }
+            ],
             "max_tokens": 600,
         },
         {"kind": "text", "content_contains_any": ["red", "blue"]},
@@ -275,7 +256,16 @@ CASES: list[Case] = [
         "vision_two_images",
         "vision",
         {
-            "messages": [{"role": "user", "content": [{"type": "text", "text": "How many images did I send? Answer with a digit."}, {"type": "image_url", "image_url": {"url": IMAGE_URL}}, {"type": "image_url", "image_url": {"url": _png_data_url(32, 32)}}]}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "How many images did I send? Answer with a digit."},
+                        {"type": "image_url", "image_url": {"url": IMAGE_URL}},
+                        {"type": "image_url", "image_url": {"url": _png_data_url(32, 32)}},
+                    ],
+                }
+            ],
             "max_tokens": 600,
         },
         {"kind": "text", "content_contains": "2"},
@@ -304,8 +294,30 @@ CASES: list[Case] = [
 ]
 
 
+def all_cases() -> list[Case]:
+    """Seed cases plus the generated batteries (imported lazily: they read data files)."""
+    from providers_verifier.cases.longctx import longctx_cases
+    from providers_verifier.cases.media import media_cases
+    from providers_verifier.cases.params import PARAM_CASES
+    from providers_verifier.cases.tool_battery import minimax_cases, walle_cases
+
+    return [*CASES, *PARAM_CASES, *minimax_cases(), *walle_cases(), *media_cases(), *longctx_cases()]
+
+
+def cases_for(vendor, categories: list[str] | None = None, ids: list[str] | None = None) -> list[Case]:
+    """Shared cases the vendor can take, plus the vendor's own."""
+    out = [*all_cases(), *vendor.extra_cases()]
+    if not vendor.supports.get("video", True):
+        out = [c for c in out if "video" not in c.id]
+    if categories:
+        out = [c for c in out if c.category in categories]
+    if ids:
+        out = [c for c in out if c.id in ids]
+    return out
+
+
 def load_cases(categories: list[str] | None = None, ids: list[str] | None = None) -> list[Case]:
-    out = CASES
+    out = all_cases()
     if categories:
         out = [c for c in out if c.category in categories]
     if ids:

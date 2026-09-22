@@ -1,4 +1,4 @@
-from providers_verifier.compare import compare, golden_summary
+from providers_verifier.core.compare import compare, golden_summary
 
 TOOL = {"type": "function", "function": {"name": "get_weather", "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}}}
 CASE = {"id": "t", "category": "tools", "request": {"tools": [TOOL]}, "expect": {"kind": "tool_call", "tool_names": ["get_weather"]}}
