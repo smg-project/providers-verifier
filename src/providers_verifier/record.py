@@ -52,6 +52,11 @@ def record_case(vendor: VendorProfile, case: Case, model: str, sdk: str, repeat:
     sampling = None if temperature is None else {**vendor.recommended_sampling, "temperature": temperature}
     passthrough = vendor.passthrough_keys + (vendor.native_extra_body_keys if sdk == "native" else ())
     rec = call_openai_style(client, model, case.request, vendor.vendor_body(case.request), passthrough, sampling)
+    if rec.get("status") is None and not case.request.get("stream") and vendor.stream_fallback:
+        # the vendor closed a slow non-streaming connection; the same request streamed is the vendor's answer
+        streamed = {**case.request, "stream": True, "stream_options": {"include_usage": True}}
+        rec = call_openai_style(client, model, streamed, vendor.vendor_body(streamed), passthrough, sampling)
+        rec["recorded_via_stream"] = True
     rec.update(
         {"case": case.id, "category": case.category, "model": model, "sdk": sdk, "repeat": repeat, "temperature": temperature, "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     )

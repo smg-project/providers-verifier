@@ -27,6 +27,8 @@ class VendorProfile:
     passthrough_keys: tuple[str, ...] = ()
     # request keys the native SDK rejects as typed params; sent in extra_body for native recordings
     native_extra_body_keys: tuple[str, ...] = ()
+    # re-record a non-streaming request as a stream when the vendor drops the connection before answering
+    stream_fallback: bool = False
     # vendor-specific cases appended to the shared set
     extra_cases: Callable[[], list[Case]] = list
     # capability flags used to skip shared cases the vendor cannot take

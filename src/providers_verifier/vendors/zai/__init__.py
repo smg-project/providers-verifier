@@ -18,5 +18,9 @@ PROFILE = VendorProfile(
     passthrough_keys=("thinking", "tool_stream", "extra_body"),
     native_extra_body_keys=("stream_options", "n", "logprobs", "top_logprobs", "presence_penalty", "frequency_penalty"),
     extra_cases=zai_cases,
-    notes="GLM-5.3 / 5.3-Flash: thinking forced on, clear_thinking:false recommended, tool_stream for streamed tools.",
+    stream_fallback=True,
+    notes=(
+        "GLM-5.3 / 5.3-Flash: thinking forced on, clear_thinking:false recommended, tool_stream for streamed tools. "
+        "Non-streaming requests are closed by the vendor after ~60-180 s of generation; long-thinking answers only complete when streamed."
+    ),
 )
