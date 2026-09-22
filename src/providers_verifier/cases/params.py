@@ -31,7 +31,7 @@ PARAM_CASES: list[Case] = [
     _c("param_reasoning_effort_invalid", reasoning_effort="ultra"),
     _c("param_thinking_type_bogus", thinking={"type": "sometimes"}),
     _c("param_empty_messages", messages=[]),
-    _c("param_unknown_field", foo_bar_baz=1),
+    _c("param_unknown_field", extra_body={"foo_bar_baz": 1}),
     _c("param_tool_bad_type", tools=[{"type": "retrieval", "function": {"name": "x", "parameters": {"type": "object"}}}]),
     _c("param_tool_duplicate_names", tools=[WEATHER_TOOL, WEATHER_TOOL]),
     _c("param_tool_choice_unknown_tool", tools=[WEATHER_TOOL], tool_choice={"type": "function", "function": {"name": "nope"}}),

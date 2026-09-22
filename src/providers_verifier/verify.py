@@ -79,12 +79,8 @@ def main() -> None:
 
     def run(job: tuple[Case, dict[str, Any], str | None, int]) -> dict[str, Any]:
         case, summary, sample, i = job
-        extra = dict(base_extra)
         # vendor-only fields still ride in extra_body so the target sees the same request the vendor did
-        for key in vendor.passthrough_keys:
-            if key in case.request:
-                extra[key] = case.request[key]
-        target = call_openai_style(client, args.model, case.request, extra, vendor.passthrough_keys, vendor.recommended_sampling)
+        target = call_openai_style(client, args.model, case.request, dict(base_extra), vendor.passthrough_keys, vendor.recommended_sampling)
         cmp = compare({"id": case.id, "category": case.category, "request": case.request, "expect": case.expect}, {**summary, "content_sample": sample}, target)
         cmp.update({"repeat": i, "target_record": target, "golden_summary": summary})
         tag = "PASS" if cmp["pass"] else "FAIL " + ",".join(cmp["failed_checks"])

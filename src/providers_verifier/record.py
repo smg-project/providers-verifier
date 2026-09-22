@@ -23,8 +23,15 @@ GOLDEN = Path(__file__).resolve().parents[2] / "golden"
 def call_openai_style(client: Any, model: str, request: dict[str, Any], extra_body: dict[str, Any] | None, passthrough_keys: tuple[str, ...], sampling: dict[str, float] | None) -> dict[str, Any]:
     """One chat completion through any client with the OpenAI `chat.completions.create` shape."""
     req = dict(request)
+    extra_body = dict(extra_body or {})
+    # fields the SDK would reject as typed params still reach the vendor, in the body
     for key in passthrough_keys:
-        req.pop(key, None)
+        if key in req:
+            value = req.pop(key)
+            if key == "extra_body":
+                extra_body.update(value)
+            else:
+                extra_body.setdefault(key, value)
     if sampling:
         for k, v in sampling.items():
             req.setdefault(k, v)
@@ -43,8 +50,8 @@ def call_openai_style(client: Any, model: str, request: dict[str, Any], extra_bo
 def record_case(vendor: VendorProfile, case: Case, model: str, sdk: str, repeat: int, temperature: float | None) -> dict[str, Any]:
     client = vendor.native_client() if sdk == "native" else vendor.openai_client()
     sampling = None if temperature is None else {**vendor.recommended_sampling, "temperature": temperature}
-    drop = vendor.passthrough_keys + (vendor.native_drop_keys if sdk == "native" else ())
-    rec = call_openai_style(client, model, case.request, vendor.vendor_body(case.request), drop, sampling)
+    passthrough = vendor.passthrough_keys + (vendor.native_extra_body_keys if sdk == "native" else ())
+    rec = call_openai_style(client, model, case.request, vendor.vendor_body(case.request), passthrough, sampling)
     rec.update(
         {"case": case.id, "category": case.category, "model": model, "sdk": sdk, "repeat": repeat, "temperature": temperature, "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     )

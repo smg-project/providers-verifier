@@ -25,8 +25,8 @@ class VendorProfile:
     vendor_body: Callable[[dict[str, Any]], dict[str, Any]] = lambda request: {}
     # request keys the OpenAI SDK must not see as typed params (moved to extra_body)
     passthrough_keys: tuple[str, ...] = ()
-    # request keys the native SDK does not accept at all (dropped for native recordings only)
-    native_drop_keys: tuple[str, ...] = ()
+    # request keys the native SDK rejects as typed params; sent in extra_body for native recordings
+    native_extra_body_keys: tuple[str, ...] = ()
     # vendor-specific cases appended to the shared set
     extra_cases: Callable[[], list[Case]] = list
     # capability flags used to skip shared cases the vendor cannot take

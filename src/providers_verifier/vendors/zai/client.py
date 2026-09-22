@@ -21,13 +21,13 @@ def api_key() -> str:
 def native_client():
     from zai import ZaiClient
 
-    return ZaiClient(api_key=api_key(), base_url=os.environ.get("ZAI_BASE_URL", BASE_URL))
+    return ZaiClient(api_key=api_key(), base_url=os.environ.get("ZAI_BASE_URL", BASE_URL), timeout=900.0, max_retries=2)
 
 
 def openai_client():
     from openai import OpenAI
 
-    return OpenAI(api_key=api_key(), base_url=os.environ.get("ZAI_BASE_URL", BASE_URL))
+    return OpenAI(api_key=api_key(), base_url=os.environ.get("ZAI_BASE_URL", BASE_URL), timeout=900.0, max_retries=2)
 
 
 def vendor_body(request: dict[str, Any]) -> dict[str, Any]:

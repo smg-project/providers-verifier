@@ -15,8 +15,8 @@ PROFILE = VendorProfile(
     openai_client=client.openai_client,
     native_client=client.native_client,
     vendor_body=client.vendor_body,
-    passthrough_keys=("thinking",),
-    native_drop_keys=("stream_options",),
+    passthrough_keys=("thinking", "tool_stream", "extra_body"),
+    native_extra_body_keys=("stream_options", "n", "logprobs", "top_logprobs", "presence_penalty", "frequency_penalty"),
     extra_cases=zai_cases,
     notes="GLM-5.3 / 5.3-Flash: thinking forced on, clear_thinking:false recommended, tool_stream for streamed tools.",
 )
