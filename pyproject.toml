@@ -1,0 +1,29 @@
+[project]
+name = "providers-verifier"
+version = "0.1.0"
+description = "Record a vendor's real API behaviour and replay it against an OpenAI-compatible gateway (SMG). z.ai / GLM first."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "zai-sdk>=0.2.3",
+    "openai>=1.60",
+    "httpx>=0.27",
+    "jsonschema>=4.23",
+    "pillow>=10.4",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-xdist>=3.6", "ruff>=0.6"]
+
+[project.scripts]
+pv-record = "providers_verifier.record:main"
+pv-verify = "providers_verifier.verify:main"
+
+[build-system]
+requires = ["uv_build>=0.11.13,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "providers_verifier"
+module-root = "src"
