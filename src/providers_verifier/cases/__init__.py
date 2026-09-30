@@ -305,7 +305,7 @@ def all_cases() -> list[Case]:
 
 
 def cases_for(vendor, categories: list[str] | None = None, ids: list[str] | None = None) -> list[Case]:
-    """Shared cases the vendor can take, plus the vendor's own."""
+    """Default acceptance cases; explicit IDs can select diagnostic-only inputs."""
     out = [*all_cases(), *vendor.extra_cases()]
     if not vendor.supports.get("video", True):
         out = [c for c in out if "video" not in c.id]
@@ -313,6 +313,10 @@ def cases_for(vendor, categories: list[str] | None = None, ids: list[str] | None
         out = [c for c in out if c.category in categories]
     if ids:
         out = [c for c in out if c.id in ids]
+    else:
+        # Invalid sampling and an unachievable generation requirement remain opt-in.
+        diagnostic_ids = {"param_temperature_negative", "walle_TestRangeConstraints_003_nonstream", "walle_TestRangeConstraints_003_stream"}
+        out = [c for c in out if c.id not in diagnostic_ids]
     return out
 
 
