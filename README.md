@@ -38,8 +38,9 @@ uv run pytest
 ```
 
 `pv-verify` prints a metrics block, writes a JSON report under `runs/`, writes
-JUnit XML when asked, and exits non-zero if any threshold fails, so it can sit in
-CI.
+JUnit XML when asked, and exits non-zero if any threshold fails or selected-case coverage is incomplete, so it can sit in CI.
+
+The JSON report includes `coverage`: selected and executed case IDs, cases with missing or empty golden recordings, and a `complete` flag. Missing recordings, an empty selection, or cases with no repeats make coverage incomplete. Available cases still run and retain their metrics; JUnit also records a coverage error. Use `--case` or `--category` to explicitly select a smaller set.
 
 ## What gets tested
 

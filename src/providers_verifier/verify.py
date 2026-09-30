@@ -1,6 +1,7 @@
 """Replay the cases against a target OpenAI-compatible endpoint, compare each
 answer with the vendor golden set, and print MiniMax-style metrics. Writes a
-JSON report and optionally JUnit XML. Exit code 1 when a threshold fails."""
+JSON report and optionally JUnit XML. Exit code 1 when a threshold fails or
+selected-case coverage is incomplete."""
 
 from __future__ import annotations
 
@@ -65,7 +66,8 @@ def main() -> None:
 
     jobs: list[tuple[Case, dict[str, Any], str | None, int]] = []
     skipped = []
-    for case in cases_for(vendor, args.category, args.case):
+    selected_cases = cases_for(vendor, args.category, args.case)
+    for case in selected_cases:
         loaded = load_golden(golden_dir, case)
         if loaded is None:
             skipped.append(case.id)
@@ -91,6 +93,18 @@ def main() -> None:
         results = list(pool.map(run, jobs))
 
     per_case = aggregate_cases(results)
+    coverage = {
+        "selected_cases": [case.id for case in selected_cases],
+        "executed_cases": sorted(per_case),
+        "missing_golden": skipped,
+        "complete": bool(selected_cases) and len(per_case) == len(selected_cases),
+    }
+    coverage_error = None
+    if not coverage["complete"]:
+        coverage_error = f"Incomplete verification coverage: {len(per_case)} of {len(selected_cases)} selected cases executed"
+        if skipped:
+            coverage_error += "; missing or empty golden recordings: " + ", ".join(skipped)
+        print(coverage_error)
     m = metrics(results)
     m["cases_failed_majority"] = sorted(k for k, v in per_case.items() if not v["pass"])
     m["thresholds"] = THRESHOLDS
@@ -99,13 +113,17 @@ def main() -> None:
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     report = Path(args.report or f"runs/verify-{golden_model}-{stamp}.json")
     report.parent.mkdir(parents=True, exist_ok=True)
-    report.write_text(json.dumps({"target": args.target, "model": args.model, "golden": str(golden_dir), "metrics": m, "per_case": per_case, "results": results}, ensure_ascii=False, indent=1))
+    report.write_text(json.dumps({
+        "target": args.target, "model": args.model, "golden": str(golden_dir),
+        "metrics": m, "coverage": coverage, "per_case": per_case, "results": results,
+    }, ensure_ascii=False, indent=1))
     print("report:", report)
     if args.junit:
-        write_junit(args.junit, per_case, args.target)
+        write_junit(args.junit, per_case, args.target, coverage_error=coverage_error)
         print("junit:", args.junit)
     if m.get("threshold_failures"):
         print("THRESHOLDS FAILED: " + "; ".join(m["threshold_failures"]))
+    if coverage_error or m.get("threshold_failures"):
         sys.exit(1)
 
 

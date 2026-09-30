@@ -9,7 +9,7 @@ from typing import Any
 from xml.sax.saxutils import escape
 
 
-def write_junit(path: str | Path, per_case: dict[str, dict[str, Any]], target: str) -> None:
+def write_junit(path: str | Path, per_case: dict[str, dict[str, Any]], target: str, *, coverage_error: str | None = None) -> None:
     suites: dict[str, list[tuple[str, dict[str, Any]]]] = defaultdict(list)
     for case_id, agg in per_case.items():
         suites[agg["category"]].append((case_id, agg))
@@ -24,6 +24,14 @@ def write_junit(path: str | Path, per_case: dict[str, dict[str, Any]], target: s
                 lines.append(f'      <failure message="{escape(", ".join(a["failed_checks"]))}">{escape(detail)}</failure>')
             lines.append("    </testcase>")
         lines.append("  </testsuite>")
+    if coverage_error:
+        lines.extend([
+            '  <testsuite name="verification" tests="1" failures="0" errors="1">',
+            '    <testcase classname="verification" name="coverage">',
+            f'      <error message="Incomplete verification coverage">{escape(coverage_error)}</error>',
+            "    </testcase>",
+            "  </testsuite>",
+        ])
     lines.append("</testsuites>")
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text("\n".join(lines) + "\n")
