@@ -79,11 +79,15 @@ def compare(case: dict[str, Any], golden: dict[str, Any], target: dict[str, Any]
 
     check("status_class", _status_class(target.get("status")) == golden["status_class"], golden["status_class"], _status_class(target.get("status")))
     if target.get("status") == 200 and golden["status_class"] == "2xx":
-        check("finish_reason", target.get("finish_reason") == golden["finish_reason"], golden["finish_reason"], target.get("finish_reason"))
+        named_tool = expect.get("expected_tool_call") is True and bool(expect.get("tool_names"))
+        # Explicit required tools must not inherit contradictory names or incomplete finishes from recordings.
+        want_finish = "tool_calls" if named_tool else golden["finish_reason"]
+        check("finish_reason", target.get("finish_reason") == want_finish, want_finish, target.get("finish_reason"))
         want_trigger = expect["expected_tool_call"] if expect.get("expected_tool_call") is not None else golden["tool_triggered"]
         check("tool_triggered", bool(target.get("tool_calls")) == want_trigger, want_trigger, bool(target.get("tool_calls")))
         if want_trigger:
-            check("tool_names", list(_tool_names(target)) == golden["tool_names"], golden["tool_names"], list(_tool_names(target)))
+            want_names = sorted(set(expect["tool_names"])) if named_tool else golden["tool_names"]
+            check("tool_names", list(_tool_names(target)) == want_names, want_names, list(_tool_names(target)))
             tools = case.get("request", {}).get("tools") or []
             check("args_match_schema", args_match_schema(target, tools), True, args_match_schema(target, tools))
         if kind in ("text", "thinking") or expect.get("reasoning_present") is not None:
