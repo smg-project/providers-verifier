@@ -46,13 +46,63 @@ def minimax_cases(max_tokens: int = 4096) -> list[Case]:
     return cases
 
 
+# The reference-preserving wrapper helpers are adapted from Moonshot AI's
+# Kimi-Vendor-Verifier, tests/tool_call_json_schema/validator.py at
+# 66092cf444c97356c0e11c5078c67116390615d9 (MIT, Copyright (c) 2026 Moonshot AI).
+# License: data/walle/LICENSE-Kimi-Vendor-Verifier.
+def _rewrite_root_refs(obj: Any, target_ref: str, *, schema_map: bool = False) -> Any:
+    """Rewrite JSON Schema root self-references to *target_ref*."""
+    if isinstance(obj, dict):
+        rewritten: dict[str, Any] = {}
+        for key, value in obj.items():
+            if schema_map:
+                rewritten[key] = _rewrite_root_refs(value, target_ref)
+            elif key == "$ref" and value == "#":
+                rewritten[key] = target_ref
+            elif key in ("const", "enum", "default", "examples"):
+                rewritten[key] = value
+            else:
+                rewritten[key] = _rewrite_root_refs(value, target_ref, schema_map=key in ("$defs", "definitions", "properties", "patternProperties", "dependentSchemas"))
+        return rewritten
+    if isinstance(obj, list):
+        return [_rewrite_root_refs(item, target_ref) for item in obj]
+    return obj
+
+
 def _wrap_schema(schema: Any) -> dict[str, Any]:
     """Tool `parameters` must be an object schema; other roots become a required `value` property."""
     if isinstance(schema, dict) and schema.get("type") == "object":
         return schema
     if isinstance(schema, dict) and "properties" in schema and "type" not in schema:
         return {"type": "object", **schema}
-    return {"type": "object", "properties": {"value": schema}, "required": ["value"], "additionalProperties": False}
+    if not isinstance(schema, dict):
+        return {"type": "object", "properties": {"value": schema}, "required": ["value"], "additionalProperties": False}
+
+    wrapped: dict[str, Any] = {
+        "type": "object",
+        "properties": {},
+        "required": ["value"],
+        "additionalProperties": False,
+    }
+    defs = dict(schema.get("$defs", {}))
+    def_name = "__case_schema"
+    while def_name in defs:
+        def_name = f"_{def_name}"
+    target_ref = f"#/$defs/{def_name}"
+    rewritten = _rewrite_root_refs(schema, target_ref)
+    if rewritten != schema:
+        defs.update(rewritten.get("$defs", {}))
+        defs[def_name] = {k: v for k, v in rewritten.items() if k not in ("$defs", "$id")}
+        wrapped["properties"] = {"value": {"$ref": target_ref}}
+        wrapped["$defs"] = defs
+    else:
+        wrapped["properties"] = {"value": {k: v for k, v in schema.items() if k not in ("$defs", "$id")}}
+        if "$defs" in schema:
+            wrapped["$defs"] = schema["$defs"]
+
+    if "$id" in schema:
+        wrapped["$id"] = schema["$id"]
+    return wrapped
 
 
 def walle_cases(max_tokens: int = 2048, modes: tuple[str, ...] = ("nonstream", "stream")) -> list[Case]:

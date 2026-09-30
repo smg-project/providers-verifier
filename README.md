@@ -66,6 +66,8 @@ The test data under `data/` is vendored from the MIT-licensed
 MiniMax-Provider-Verifier and Kimi-Vendor-Verifier repositories. See
 `data/README.md` for attribution.
 
+Non-object Walle schemas use a required `value` argument. The wrapper preserves the corpus's root `$defs`, `$id`, and recursive `$ref: "#"`; case selection, token budgets, and golden expectations remain unchanged. This is not a general-purpose JSON Schema bundler.
+
 ### Metrics and thresholds
 
 | Metric | Threshold | Meaning |
