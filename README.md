@@ -48,6 +48,8 @@ The shared cases live in `src/providers_verifier/cases/`. They are vendor
 neutral: the model name is injected at run time and vendor-only request fields
 are added by the vendor profile.
 
+The counts below describe the full catalogue, including diagnostic-only cases.
+
 | Category | Cases | What it proves |
 |---|---|---|
 | `text`, `thinking`, `streaming`, `structured`, `error` | 11 | Basic chat, reasoning split, streamed usage, JSON mode and JSON schema, error shape |
@@ -59,8 +61,18 @@ are added by the vendor profile.
 | `longctx` | 4 | Needle retrieval at 32k, 128k, 512k and 1M prompt tokens |
 | `vendor` | 12 | Vendor-specific fields (for z.ai: the `thinking` object, preserved thinking across turns, every `reasoning_effort` value, `tool_stream`, `file_url`) |
 
-Total: 634 cases for z.ai. Tool batteries run 10 times per case by default,
-everything else 3 times, and a case passes when the majority of its runs pass.
+The catalogue contains 634 cases for z.ai; the default selection is 631 cases (5,561 replay requests). Tool batteries run 10 times per case by default, everything else 3 times, and a case passes when the majority of its runs pass.
+
+### Diagnostic-only cases
+
+Recording and replay exclude the following cases by default, including category selections. Their original requests and goldens are retained; select them explicitly with repeated `--case` arguments. They are excluded from default coverage, not counted as passing. Selecting all 634 cases explicitly restores 5,584 replay requests.
+
+| Case ID | Why it is opt-in |
+|---|---|
+| `param_temperature_negative` | `temperature=-0.5` is outside z.ai's documented range; default acceptance should not require a gateway to accept it even if a vendor recording did. |
+| `walle_TestRangeConstraints_003_nonstream`, `walle_TestRangeConstraints_003_stream` | `minLength=999999999999` cannot be satisfied within the fixture's 2,048-token output budget. |
+
+These are different issues handled together because they share the same case-selection entry point. Other malformed-parameter cases remain in the default selection. For example, add `--case param_temperature_negative` to `pv-record` or `pv-verify` for an explicit diagnostic run.
 
 The test data under `data/` is vendored from the MIT-licensed
 MiniMax-Provider-Verifier and Kimi-Vendor-Verifier repositories. See
