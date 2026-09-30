@@ -82,6 +82,8 @@ MiniMax-Provider-Verifier and Kimi-Vendor-Verifier repositories. See
 
 Thresholds are in `src/providers_verifier/core/stats.py`.
 
+Cases that explicitly require a named tool (`expected_tool_call=true` and `tool_names`) use those declared names and require a completed `tool_calls` finish. Arguments must still satisfy the request's tool schema. Recorded names and finish reasons remain the fallback for other cases; historical golden files are unchanged.
+
 ## Repository layout
 
 ```
